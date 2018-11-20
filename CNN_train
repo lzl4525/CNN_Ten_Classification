@@ -1,0 +1,63 @@
+import keras
+from chuli import load_data
+from keras.preprocessing.image import ImageDataGenerator
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.layers import Conv2D, MaxPooling2D
+
+(x_train,y_train),(x_test,y_test) =load_data()
+
+print(x_train.shape,y_train.shape)
+print(x_test.shape,y_test.shape)
+
+import matplotlib.pyplot as plt
+plt.imshow(x_train[0])
+plt.show()
+plt.imshow(x_train[1])
+plt.show()
+
+x_train = x_train/255
+x_test = x_test/255
+y_train = keras.utils.to_categorical(y_train,10)
+y_test = keras.utils.to_categorical(y_test,10)
+
+model = Sequential([
+    Conv2D(32, (3, 3), padding='same', input_shape=(100, 100, 3), activation='relu'),
+    Conv2D(32, (3, 3), activation='relu'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Dropout(0.25),
+
+    Conv2D(64, (3, 3), padding='same', activation='relu'),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Dropout(0.25),
+
+    Flatten(),
+    Dense(512, activation='relu'),
+    Dropout(0.25),
+    Dense(256, activation='relu'),
+    Dropout(0.25),
+    Dense(10, activation='softmax')
+])
+
+model.summary()
+
+#opt = keras.optimizers.rmsprop(lr=0.0001,decay=1e-6)
+opt = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=1e-6, amsgrad=False)
+
+model.compile(loss='categorical_crossentropy',optimizer=opt ,metrics=['accuracy'])
+
+datagen = ImageDataGenerator(
+    rotation_range = 20,
+    zoom_range = 0.15,
+    horizontal_flip = True,
+)
+
+model.fit_generator(datagen.flow(x_train,y_train,batch_size=64),steps_per_epoch = 1000,epochs = 100,validation_data=(x_test,y_test),workers=4,verbose=1)
+
+model.save('cifar10_trained_model.h5')
+
+
+scores = model.evaluate(x_test,y_test,verbose=1)
+print('Test loss:',scores[0])
+print('Test accuracy:',scores[1])
